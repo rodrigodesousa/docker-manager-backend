@@ -18,7 +18,7 @@ public class DockerConfig {
     @Bean
     public DockerClient buildDockerClient() {
         DockerClientConfig config = DefaultDockerClientConfig.createDefaultConfigBuilder()
-                .withDockerHost("npipe:////./pipe/docker_engine")
+                .withDockerHost(dockerSocketPath)
                 .build();
 
         DockerHttpClient httpClient = new ApacheDockerHttpClient.Builder()
