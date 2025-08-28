@@ -17,15 +17,34 @@ public class DockerConfig {
 
     @Bean
     public DockerClient buildDockerClient() {
-        DockerClientConfig config = DefaultDockerClientConfig.createDefaultConfigBuilder()
-                .withDockerHost(dockerSocketPath)
+        DefaultDockerClientConfig.Builder dockerClientConfigBuilder = DefaultDockerClientConfig
+                .createDefaultConfigBuilder();
+
+        if(this.dockerSocketPath != null && this.dockerSocketPath.startsWith("unix://")) {
+            dockerClientConfigBuilder.withDockerHost(dockerSocketPath)
+                    .withApiVersion(RemoteApiVersion.VERSION_1_24)
+                    .withDockerTlsVerify(false);
+        } else {
+            dockerClientConfigBuilder.withDockerHost(dockerSocketPath)
+                    .withApiVersion(RemoteApiVersion.VERSION_1_24);
+        }
+
+        DefaultDockerClientConfig dockerClientConfig = dockerClientConfigBuilder
                 .build();
 
-        DockerHttpClient httpClient = new ApacheDockerHttpClient.Builder()
-                .dockerHost(config.getDockerHost())
-                .sslConfig(config.getSSLConfig())
+        ApacheDockerHttpClient dockerHttpClient = new ApacheDockerHttpClient.Builder()
+                .dockerHost(dockerClientConfig.getDockerHost())
+                .maxConnections(5)
+                .connectionTimeout(Duration.ofMillis(300))
+                .responseTimeout(Duration.ofSeconds(3))
                 .build();
 
-        return DockerClientImpl.getInstance(config, httpClient);
+        DockerClient client = DockerClientBuilder.getInstance(dockerClientConfig)
+                .withDockerHttpClient(dockerHttpClient)
+                .build();
+
+        client.pingCmd().exec();
+
+        return client;
     }
 }
